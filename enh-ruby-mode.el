@@ -576,7 +576,7 @@ Warning: does not play well with command ‘electric-indent-mode’."
       (set-process-filter erm-ruby-process 'erm-filter)
       (set-process-query-on-exit-flag erm-ruby-process nil)
       (process-send-string
-       (erm-ruby-get-process)
+       erm-ruby-process
        (concat "x0:"
                (mapconcat 'identity (default-value 'enh-ruby-extra-keywords) " ")
                ":"
@@ -910,7 +910,14 @@ not treated as modifications to the buffer."
             (cond ((eq 'd bprop)
                    (setq pos (point))
                    (enh-ruby-skip-non-indentable)
-                   (enh-ruby-calculate-indent-1 pos (line-beginning-position)))
+                   (let ((indent (enh-ruby-calculate-indent-1
+                                  pos
+                                  (line-beginning-position)))
+                         (chained-stmt-p (eq 'c (save-excursion
+                                                  (forward-line 0)
+                                                  (get-text-property (point) 'indent)))))
+                     (+ indent
+                        (if chained-stmt-p enh-ruby-hanging-indent-level 0))))
                   ((and (not enh-ruby-deep-indent-construct)
                         (eq 'b bprop))
                    (current-indentation))
@@ -986,7 +993,8 @@ not treated as modifications to the buffer."
   (goto-char pos)
 
   (let* ((start-pos pos)
-         (prop (get-text-property pos 'indent))
+         (start-prop (get-text-property pos 'indent))
+         (prop start-prop)
          (indent (- (current-indentation)
                     (if (eq 'c prop) enh-ruby-hanging-indent-level 0)))
          (nbc 0)
@@ -1077,8 +1085,9 @@ not treated as modifications to the buffer."
 
       ((= max bc)
        (if (eq 'd (get-text-property (+ start-pos bc -1) 'indent))
-           (+ (enh-ruby-calculate-indent-1 (+ start-pos bc -1) start-pos)
-              enh-ruby-indent-level)
+           (let ((chained-stmt-p (eq 'c start-prop)))
+             (+ (enh-ruby-calculate-indent-1 (+ start-pos bc -1) start-pos)
+                (* (if chained-stmt-p 2 1) enh-ruby-indent-level)))
          (+ bc enh-ruby-indent-level -1)))
 
       ((= max npc)

@@ -1031,7 +1031,11 @@ not treated as modifications to the buffer."
                  (+ enh-ruby-hanging-paren-indent-level indent)))
               (deep-indent
                (cond ((char-equal (char-after pos) ?{)
-                      (+ enh-ruby-hanging-brace-deep-indent-level col))
+                      (+ enh-ruby-hanging-brace-deep-indent-level col
+                         (save-excursion
+                           (goto-char (1+ pos))
+                           (skip-syntax-forward " " (line-end-position))
+                           (- (point) pos 1))))
                      ((char-equal (char-after pos) ?%)
                       (+ enh-ruby-hanging-brace-deep-indent-level
                          col
